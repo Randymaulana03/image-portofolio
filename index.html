@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium 5-Card Carousel Slider</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #0b0b0b;
+      height: 100vh;
+      overflow: hidden;
+      color: white;
+    }
+
+    /* CONTAINER UTAMA */
+    .slider-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* BACKGROUND UTAMA LAYER (Untuk efek transisi membesar/fade) */
+    .main-bg {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-size: cover;
+      background-position: center;
+      z-index: 1;
+      transform: scale(1);
+      transition: background-image 0.8s ease-in-out, transform 0.8s ease-in-out;
+    }
+
+    /* Efek sedikit zoom-in saat berganti gambar agar dramatis */
+    .main-bg.animating {
+      transform: scale(1.03);
+    }
+
+    /* OVERLAY GELAP */
+    .main-bg::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(to right, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0.6));
+    }
+
+    /* -----------------------------------------
+       DETAIL FONT / KONTEN TEKS (SISI KIRI)
+    -------------------------------------------- */
+    .text-content {
+      position: absolute;
+      bottom: 40%;
+      left: 5%;
+      width: 40%;
+      z-index: 3;
+      
+      /* Tersembunyi sempurna di awal */
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(50px);
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, visibility 0.2s;
+    }
+
+    /* Muncul setelah background siap */
+    .text-content.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      transition-delay: 0.5s; /* Nungguin transisi background */
+    }
+
+    .subtitle {
+      font-size: 14px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ff9f43;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .title {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 25px;
+    }
+
+    .btn-discover {
+      background: none;
+      border: 1px solid white;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn-discover:hover {
+      background: white;
+      color: black;
+    }
+
+    /* -----------------------------------------
+       DERETAN KARTU (SISI KANAN BAWAH) - 5 CARDS
+    -------------------------------------------- */
+    .cards-wrapper {
+      position: absolute;
+      bottom: 4%;
+      left: 5%;
+      display: flex;
+      gap: 15px;
+      z-index: 4;
+    }
+
+    .card {
+      width: 150px;
+      height: 250px;
+      border-radius: 10px;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      border: 2px solid transparent;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), border 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+    }
+
+    /* Penanda Card Aktif (Sesuai gambar, tetap ada di tempat tapi stand out) */
+    .card.active {
+      border: 2px solid #ff9f43;
+      transform: translateY(-4px) scale(1.02);
+    }
+
+    .card-title {
+      position: absolute;
+      bottom: 15px;
+      left: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    }
+
+    /* -----------------------------------------
+       INDIKATOR ANGKA & PROGRESS BAR (BAWAH)
+    -------------------------------------------- */
+    .indicator-container {
+      position: absolute;
+      bottom: 32%;
+      left: 5%;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 4;
+    }
+
+    /* Garis Progress Bar */
+    .progress-bar-bg {
+      width: 250px;
+      height: 3px;
+      background-color: rgba(255, 255, 255, 0.2);
+      position: relative;
+      border-radius: 2px;
+    }
+
+    .progress-bar-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      width: 20%; /* Akan diatur dinamis lewat JS (20%, 40%, dst) */
+      background-color: #ff9f43;
+      border-radius: 2px;
+      transition: width 0.5s ease-in-out;
+    }
+
+    /* Angka Penunjuk */
+    .number-display {
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      min-width: 20px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slider-container">
+    
+    <div class="main-bg" id="mainBg"></div>
+    
+    <div class="text-content" id="textContent">
+      <span class="subtitle" id="txtSubtitle"></span>
+      <h1 class="title" id="txtTitle"></h1>
+      <p class="description" id="txtDesc"></p>
+      <button class="btn-discover">DISCOVER LOCATION</button>
+    </div>
+
+    <div class="cards-wrapper">
+      <div class="card" onclick="selectLocation(0, this)" style="background-image: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=600');">
+        <div class="card-title">Nagano</div>
+      </div>
+      <div class="card" onclick="selectLocation(1, this)" style="background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600');">
+        <div class="card-title">Marrakech</div>
+      </div>
+      <div class="card" onclick="selectLocation(2, this)" style="background-image: url('https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=600');">
+        <div class="card-title">Yosemite</div>
+      </div>
+      <div class="card" onclick="selectLocation(3, this)" style="background-image: url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=600');">
+        <div class="card-title">Iceland</div>
+      </div>
+      <div class="card" onclick="selectLocation(4, this)" style="background-image: url('https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=600');">
+        <div class="card-title">Cappadocia</div>
+      </div>
+    </div>
+
+    <div class="indicator-container">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <div class="number-display" id="numberDisplay">1</div>
+    </div>
+
+  </div>
+
+  <script>
+    // DATA 5 LOKASI
+    const locations = [
+      {
+        subtitle: "Japan Alps",
+        title: "Nagano Prefecture",
+        desc: "Nagano Prefecture, set within the majestic Japan Alps, is a cultural treasure trove with its historic shrines and temples, particularly the famous Zenkō-ji.",
+        bg: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000"
+      },
+      {
+        subtitle: "Sahara Desert - Morocco",
+        title: "Marrakech Merzouga",
+        desc: "Nikmati keindahan magis gurun pasir Sahara di Merzouga. Menginap di bawah taburan bintang dan rasakan petualangan menembus bukit pasir emas yang tak berujung.",
+        bg: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000"
+      },
+      {
+        subtitle: "Sierra Nevada - USA",
+        title: "Yosemite National Park",
+        desc: "Terkenal dengan tebing granit raksasa El Capitan dan air terjunnya yang menjulang tinggi, Yosemite menawarkan pemandangan alam liar Amerika yang menakjubkan.",
+        bg: "https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1000"
+      },
+      {
+        subtitle: "Nordic Wonders - Iceland",
+        title: "Reykjavik Aurora",
+        desc: "Saksikan tarian magis Aurora Borealis di langit Islandia yang bersih, dikelilingi oleh pemandangan air terjun beku dan gunung berapi yang spektakuler.",
+        bg: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1000"
+      },
+      {
+        subtitle: "Anatolia - Turkey",
+        title: "Cappadocia Valley",
+        desc: "Terbanglah bersama ratusan balon udara di atas formasi batuan 'Fairy Chimneys' yang unik di Cappadocia saat matahari terbit melukis langit.",
+        bg: "https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1000"
+      }
+    ];
+
+    const mainBg = document.getElementById('mainBg');
+    const textContent = document.getElementById('textContent');
+    const progressBar = document.getElementById('progressBar');
+    const numberDisplay = document.getElementById('numberDisplay');
+    let currentActiveIndex = 0;
+
+    // Load halaman pertama kali
+    window.onload = () => {
+      const firstCard = document.querySelectorAll('.card')[0];
+      selectLocation(0, firstCard);
+    };
+
+    function selectLocation(index, cardElement) {
+      // 1. Sembunyikan tulisan kiri (reset ke bawah & fade out) agar tidak bocor kelihatan
+      textContent.classList.remove('show');
+
+      // 2. Tambahkan kelas efek zoom-in pada background saat berganti gambar
+      mainBg.classList.add('animating');
+
+      // 3. Atur status border aktif pada card kanan (Card tidak hilang, tetap di tempat!)
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+      cardElement.classList.add('active');
+
+      // 4. Update Angka dan Progress Bar di bawah secara presisi
+      numberDisplay.innerText = index + 1;
+      const progressWidth = ((index + 1) / locations.length) * 100;
+      progressBar.style.width = progressWidth + '%';
+
+      // 5. Ganti gambar background utama
+      mainBg.style.backgroundImage = `url('${locations[index].bg}')`;
+
+      // 6. Jalankan animasi teks naik ke atas SETELAH background selesai bertransisi
+      setTimeout(() => {
+        document.getElementById('txtSubtitle').innerText = locations[index].subtitle;
+        document.getElementById('txtTitle').innerText = locations[index].title;
+        document.getElementById('txtDesc').innerText = locations[index].desc;
+        
+        textContent.classList.add('show');
+        mainBg.classList.remove('animating');
+      }, 400); // jeda sinkronisasi transisi
+    }
+  </script>
+
+</body>
+</html>
